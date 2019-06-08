@@ -36,93 +36,6 @@ Vector color(const Ray r, Hitable_List *world_list, int depth)
     }
 }
 
-Hitable_List random_scene()
-{
-    int n = 500;
-    Hitable **list = (Hitable **) malloc((n + 1) * sizeof(Hitable *));
-
-    Sphere *sphere;
-    Lambertian *lam;
-    Metal *metal;
-    Dielectric *diel;
-
-    sphere = (Sphere *) malloc(sizeof(Sphere));
-    lam = (Lambertian *) malloc(sizeof(Lambertian));
-    *lam = new_lambertian(new_vector(new_point(0.5, 0.5, 0.5)));
-    *sphere = new_sphere(
-                 new_vector(new_point(0, -1000, 0)), 
-                 1000, 
-                 (void *) lam,
-                 lam->mat.scatter
-              );
-    list[0] = &sphere->hitable;
-    list[0]->inst = (void *) sphere;
-
-    int i = 1;
-    for (int a = -11; a < 11; a++) {
-        for (int b = -11; b < 11; b++) {
-            float choose_mat = drand48();
-            Vector center = new_vector(new_point(a + 0.9 * drand48(), 0.2, b + 0.9 * drand48()));
-            sphere = (Sphere *) malloc(sizeof(Sphere));
-
-            if (center.length(center.sub(center, new_vector(new_point(4, 0.2, 0)))) > 0.9) {
-                if (choose_mat < 0.8) {
-                    // diffuse
-                    lam = (Lambertian *) malloc(sizeof(Lambertian));
-                    *lam = new_lambertian(new_vector(new_point(drand48() * drand48(), drand48() * drand48(), drand48() * drand48())));
-                    *sphere = new_sphere(
-                                   center,
-                                   0.2,
-                                   (void *) lam,
-                                   lam->mat.scatter
-                              );
-                } else if (choose_mat < 0.95) {
-                    // metal
-                    metal = (Metal *) malloc(sizeof(Metal));
-                    *metal = new_metal(new_vector(new_point(0.5 * (1 + drand48()), 0.5 * (1 + drand48()), 0.5 * (1 + drand48()))), 0.5 * drand48());
-                    *sphere = new_sphere(
-                                    center,
-                                    0.2,
-                                    (void *) metal,
-                                    metal->mat.scatter
-                              );
-                } else {
-                    // glass
-                    diel = (Dielectric *) malloc(sizeof(Dielectric));
-                    *diel = new_dielectric(1.5);
-                    *sphere = new_sphere(center, 0.2, (void *) diel, diel->mat.scatter);
-                }
-
-                list[i] = &sphere->hitable;
-                list[i++]->inst = (void *) sphere;
-            }
-        }
-    }
-
-    sphere  = (Sphere *) malloc(sizeof(Sphere));
-    diel = (Dielectric *) malloc(sizeof(Dielectric));
-    *diel = new_dielectric(1.5);
-    *sphere = new_sphere(new_vector(new_point(0, 1, 0)), 1.0, (void *) diel, diel->mat.scatter);
-    list[i] = &sphere->hitable;
-    list[i++]->inst = (void *) sphere;
-
-    sphere  = (Sphere *) malloc(sizeof(Sphere));
-    lam = (Lambertian *) malloc(sizeof(Lambertian));
-    *lam = new_lambertian(new_vector(new_point(0.4, 0.2, 0.1))); 
-    *sphere = new_sphere(new_vector(new_point(-4, 1, 0)), 1.0, (void *) lam, lam->mat.scatter);
-    list[i] = &sphere->hitable;
-    list[i++]->inst = (void *) sphere;
-
-    sphere  = (Sphere *) malloc(sizeof(Sphere));
-    metal = (Metal *) malloc(sizeof(Metal));
-    *metal = new_metal(new_vector(new_point(0.7, 0.6, 0.5)), 0.0);
-    *sphere = new_sphere(new_vector(new_point(4, 1, 0)), 1.0, (void *) metal, metal->mat.scatter);
-    list[i] = &sphere->hitable;
-    list[i++]->inst = (void *) sphere;
-
-    return new_hitable_list(list, i);
-}
-
 int main(int argc, char **argv) {
     if (argc != 3) {
         fprintf(stderr, "%d\n", argc);
@@ -199,7 +112,6 @@ int main(int argc, char **argv) {
     }
 
     Hitable_List world = new_hitable_list(list, sphere_count);
-    //world = random_scene();
 
     Vector lookfrom = new_vector(new_point(13, 2, 3));
     Vector lookat = new_vector(new_point(0, 0, 0));
@@ -250,9 +162,6 @@ int main(int argc, char **argv) {
 
         free(sphere->mat_ptr.inst);
         free(sphere);
-    }
-    for (int i = 0 ; i < world.list_size; i++) {
-        //free(world.list[i]->inst);
     }
 
     return 0;

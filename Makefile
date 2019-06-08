@@ -27,15 +27,16 @@ OUTPUTS := \
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(EXEC): $(OBJS)
-	$(CC) $^ $(LDFLAGS) -o $@
+	$(CC) $(CFLAGS) $^ $(LDFLAGS) -o $@
 
 test: $(EXEC)
 	./$(EXEC) trace1.txt out1.ppm
 	./$(EXEC) trace2.txt out2.ppm
 
 check: $(EXEC)
-	@./$(EXEC) trace1.txt out1.ppm && diff -u baseline.ppm out1.ppm || (echo Fail; exit)
+	@./$(EXEC) trace1.txt out1.ppm && diff -u baseline.ppm out1.ppm || (echo Fail; exit -1)
 	@echo "Verified OK"
 
 clean:
 	rm -f $(EXEC) $(OBJS) $(OUTPUTS)
+
