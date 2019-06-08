@@ -1,0 +1,5 @@
+*.o
+*.out
+raytracing
+out1.ppm
+out2.ppm
