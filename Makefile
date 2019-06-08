@@ -19,15 +19,23 @@ OBJS := \
 	vector.o \
 	main.o
 
+OUTPUTS := \
+	out1.ppm \
+	out2.ppm
+
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(EXEC): $(OBJS)
 	$(CC) $^ $(LDFLAGS) -o $@
 
+test: $(EXEC)
+	./$(EXEC) trace1.txt out1.ppm
+	./$(EXEC) trace2.txt out2.ppm
+
 check: $(EXEC)
-	@./$(EXEC) && diff -u baseline.ppm out.ppm || (echo Fail; exit)
+	@./$(EXEC) trace1.txt out1.ppm && diff -u baseline.ppm out1.ppm || (echo Fail; exit)
 	@echo "Verified OK"
 
 clean:
-	rm -f $(EXEC) $(OBJS) out.ppm
+	rm -f $(EXEC) $(OBJS) $(OUTPUTS)

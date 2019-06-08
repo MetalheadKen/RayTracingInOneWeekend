@@ -3,6 +3,7 @@
 #include <math.h>
 #include <float.h>
 #include <time.h>
+#include <string.h>
 #include "sphere.h"
 #include "hitable_list.h"
 #include "camera.h"
@@ -122,67 +123,90 @@ Hitable_List random_scene()
     return new_hitable_list(list, i);
 }
 
-int main(void) {
-    clock_t start_time = clock();
+int main(int argc, char **argv) {
+    if (argc != 3) {
+        fprintf(stderr, "%d\n", argc);
+        fprintf(stderr, "%s [input file] [output file]\n", argv[0]);
+        exit(-1);
+    }
 
-    int nx = 1200; // length
-    int ny = 800;  // width
-    int ns = 10;   // sampling times
+    const char *infile = argv[1];
+    const char *outfile = argv[2];
+
+    FILE *fin = fopen(infile, "r");
+    FILE *fout = fopen(outfile, "wb");
+
+    int nx;      // length
+    int ny;      // width
+    int ns = 10; // sampling times
+    int sphere_count;
     float R = cos(M_PI / 4);
 
-    FILE *outfile = fopen("out.ppm", "wb");
+    fscanf(fin, "%d %d", &nx, &ny);
+    fscanf(fin, "%d", &sphere_count);
 
-    fprintf(outfile, "P3\n%d %d \n255\n", nx, ny);
+    fprintf(fout, "P3\n%d %d \n255\n", nx, ny);
 
-    Hitable *list[5];
+    Hitable *list[sphere_count];
 
     Sphere *sphere;
     Lambertian *lam;
     Dielectric *diel;
     Metal *metal;
 
-    sphere  = (Sphere *) malloc(sizeof(Sphere));
-    lam = (Lambertian *) malloc(sizeof(Lambertian));
-    *lam = new_lambertian(new_vector(new_point(0.1, 0.2, 0.5))); 
-    *sphere = new_sphere(new_vector(new_point(0, 0, -1)), 0.5, (void *) lam, lam->mat.scatter);
-    list[0] = &sphere->hitable;
-    list[0]->inst = (void *) sphere;
+    for (int i = 0; i < sphere_count; i++) {
+        float radius;
+        char material_str[11];
+        Vector sphere_v = new_vector(new_point(0, 0, 0));
+        Vector material_v = new_vector(new_point(0, 0, 0));
 
-    sphere  = (Sphere *) malloc(sizeof(Sphere));
-    lam = (Lambertian *) malloc(sizeof(Lambertian));
-    *lam = new_lambertian(new_vector(new_point(0.8, 0.8, 0.0)));
-    *sphere = new_sphere(new_vector(new_point(0, -100.5, -1)), 100, (void *) lam, lam->mat.scatter);
-    list[1] = &sphere->hitable;
-    list[1]->inst = (void *) sphere;
+        fscanf(fin, "%f %f %f", &sphere_v.point.x, &sphere_v.point.y, &sphere_v.point.z);
+        fscanf(fin, "%f", &radius);
+        fscanf(fin, "%s", material_str);
 
-    sphere  = (Sphere *) malloc(sizeof(Sphere));
-    metal = (Metal *) malloc(sizeof(Metal));
-    *metal = new_metal(new_vector(new_point(0.8, 0.6, 0.2)), 0.0); 
-    *sphere = new_sphere(new_vector(new_point(1, 0, -1)), 0.5, (void *) metal, metal->mat.scatter);
-    list[2] = &sphere->hitable;
-    list[2]->inst = (void *) sphere;
+        if (!strcmp(material_str, "metal")) {
+            fscanf(fin, "%f %f %f", &material_v.point.x, &material_v.point.y, &material_v.point.z);
 
-    sphere  = (Sphere *) malloc(sizeof(Sphere));
-    diel = (Dielectric *) malloc(sizeof(Dielectric));
-    *diel = new_dielectric(1.5);
-    *sphere = new_sphere(new_vector(new_point(-1, 0, -1)), 0.5, (void *) diel, diel->mat.scatter);
-    list[3] = &sphere->hitable;
-    list[3]->inst = (void *) sphere;
+            sphere = (Sphere *) malloc(sizeof(Sphere));
+            metal = (Metal *) malloc(sizeof(Metal));
 
-    sphere  = (Sphere *) malloc(sizeof(Sphere));
-    diel = (Dielectric *) malloc(sizeof(Dielectric));
-    *diel = new_dielectric(1.5);
-    *sphere = new_sphere(new_vector(new_point(-1, 0, -1)), -0.45, (void *) diel, diel->mat.scatter);
-    list[4] = &sphere->hitable;
-    list[4]->inst = (void *) sphere;
+            *metal = new_metal(material_v, 0.0);
+            *sphere = new_sphere(sphere_v, radius, (void *) metal, metal->mat.scatter);
+        } else if (!strcmp(material_str, "lambertian")) {
+            fscanf(fin, "%f %f %f", &material_v.point.x, &material_v.point.y, &material_v.point.z);
 
-    Hitable_List world = new_hitable_list(list, 5);
-    world = random_scene();
+            sphere = (Sphere *) malloc(sizeof(Sphere));
+            lam = (Lambertian *) malloc(sizeof(Lambertian));
+
+            *lam = new_lambertian(material_v);
+            *sphere = new_sphere(sphere_v, radius, (void *) lam, lam->mat.scatter);
+        } else if (!strcmp(material_str, "dielectric")) {
+            float ref_idx;
+            fscanf(fin, "%f", &ref_idx);
+
+            sphere = (Sphere *) malloc(sizeof(Sphere));
+            diel = (Dielectric *) malloc(sizeof(Dielectric));
+
+            *diel = new_dielectric(ref_idx);
+            *sphere = new_sphere(sphere_v, radius, (void *) diel, diel->mat.scatter);
+        } else {
+            fprintf(stderr, "Unkown Material\n");
+            exit(-1);
+        }
+
+        list[i] = &sphere->hitable;
+        list[i]->inst = (void *) sphere;
+    }
+
+    Hitable_List world = new_hitable_list(list, sphere_count);
+    //world = random_scene();
 
     Vector lookfrom = new_vector(new_point(13, 2, 3));
     Vector lookat = new_vector(new_point(0, 0, 0));
     float dist_to_focus = 10.0;
     float aperture = 0.1;
+
+    clock_t start_time = clock();
 
     Camera cam = new_camera(lookfrom, lookat, new_vector(new_point(0, 1, 0)), 20, (float) nx / (float) ny, aperture, dist_to_focus);
 
@@ -211,19 +235,25 @@ int main(void) {
             int ig = (int) (255.99 * col.point.y);
             int ib = (int) (255.99 * col.point.z);
 
-            fprintf(outfile, "%d %d %d\n", ir, ig, ib);
+            fprintf(fout, "%d %d %d\n", ir, ig, ib);
         }
-    }
-
-    for (int i = 0; i < 5; i ++) {
-        free(list[i]->inst);
-    }
-    for (int i = 0; i < world.list_size; i++) {
-        free(world.list[i]->inst);
     }
 
     clock_t end_time = clock();
     printf("Elapsed: %f seconds\n", (double) (end_time - start_time) / CLOCKS_PER_SEC);
+
+    fclose(fin);
+    fclose(fout);
+
+    for (int i = 0; i < sphere_count; i++) {
+        Sphere *sphere = (Sphere *) list[i]->inst;
+
+        free(sphere->mat_ptr.inst);
+        free(sphere);
+    }
+    for (int i = 0 ; i < world.list_size; i++) {
+        //free(world.list[i]->inst);
+    }
 
     return 0;
 }
