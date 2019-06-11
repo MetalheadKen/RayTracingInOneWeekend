@@ -22,13 +22,7 @@ Vector color(const Ray r, Hitable_List *world_list, int depth)
         Vector attenuation;
 
         if (depth < 50 && rec.mat_ptr.scatter((const void *) rec.mat_ptr.inst, r, rec, &attenuation, &scattered)) {
-            Vector vec;
-
-            //#pragma omp task shared(vec) //if(depth > 25)
-            vec = color(scattered, world_list, depth + 1);
-
-            //#pragma omp taskwait
-            return attenuation.mul(attenuation, vec);
+            return attenuation.mul(attenuation, color(scattered, world_list, depth + 1));
         } else {
             return new_vector(new_point(0, 0, 0));
         }
@@ -75,7 +69,7 @@ int main(int argc, char **argv) {
     int ny;      // width
     int ns = 10; // sampling times
     int sphere_count;
-    float R = cos(M_PI / 4);
+    // float R = cos(M_PI / 4);
 
     fscanf(fin, "%d %d", &nx, &ny);
     fscanf(fin, "%d", &sphere_count);
@@ -152,7 +146,6 @@ int main(int argc, char **argv) {
     {
         #pragma omp for schedule(dynamic, 10) collapse(2)
         for (int j = ny - 1; j >= 0; j--) {
-            //#pragma omp for
             for (int i = 0; i < nx; i++) {
                 Vector col = new_vector(new_point(0, 0, 0));
                 float point_x = 0.0, point_y = 0.0, point_z = 0.0;
@@ -166,24 +159,20 @@ int main(int argc, char **argv) {
 
                     /* Obtain the color value of the random sampling point in this pixel area */
                     Ray r = cam.get_ray(cam, u, v);
-                    Vector p = r.point_at_parameter(r, 2.0);
+                    // Vector p = r.point_at_parameter(r, 2.0);
 
                     /* Accumulate the color values of all ns random sample points of this point area */
-                    //#pragma omp task depend(in:col)
-                    //col = col.add(col, color(r, &world, 0));
                     Vector temp = color(r, &world, 0);
                     point_x += temp.point.x;
                     point_y += temp.point.y;
                     point_z += temp.point.z;
                 }
 
-                //#pragma omp single // task depend(out:col)
                 col.point.x = point_x;
                 col.point.y = point_y;
                 col.point.z = point_z;
                 
                 /* Divide the color accumulated value of all ns random sampling points of this pixel area by ns to obtain the average value */
-                //#pragma omp task depend(out:col)
                 col = col.div_scalar(col, (float) ns);
                 col = new_vector(new_point(sqrt(col.point.x), sqrt(col.point.y), sqrt(col.point.z)));
                 int ir = (int) (255.99 * col.point.x);
