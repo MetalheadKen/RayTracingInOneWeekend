@@ -1,5 +1,6 @@
 *.o
 *.out
 raytracing
+raytracing_opt
 out1.ppm
 out2.ppm

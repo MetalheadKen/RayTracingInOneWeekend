@@ -11,7 +11,7 @@ struct point {
 };
 
 struct color {
-    float r, g, b;
+    int r, g, b;
 };
 
 static inline Point new_point(float x, float y, float z)
