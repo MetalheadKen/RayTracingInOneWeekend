@@ -53,8 +53,6 @@ check: $(EXEC)
 	@./$(EXEC) trace1.txt out1.ppm && diff -qu baseline.ppm out1.ppm || (echo Fail; exit -1)
 	@echo "Verified OK"
 
-best: $(EXEC)
-
 clean:
 	rm -f $(EXEC) raytracing_opt $(OBJS) main_opt.o $(OUTPUTS)
 
